@@ -394,9 +394,59 @@ func setTrexTiltPos(pos float64) {
 func stopThrottle() {
 	setThrottleMicroSeconds(0)
 }
-func setPin(pin int, pwmVal int) {
-	if err := pca9685Inst.SetPwm(pin, 0, pwmVal); err != nil {
+
+func setPin(pin int, pwmStartVal int, pwmEndVal int) {
+	if err := pca9685Inst.SetPwm(pin, pwmStartVal, pwmEndVal); err != nil {
 		panic(err)
+	}
+}
+func motorSetThrottle(motorNo int, direction int, throttlePercent float64) {
+
+	switch motorNo {
+	default:
+		panic("invalid motor")
+	case 1:
+		pinPwm := 8
+		pinin1 := 10
+		pinin2 := 9
+
+		if throttlePercent == 0 {
+			setPin(pinin1, 0, 4096)
+			setPin(pinin2, 0, 4096)
+			setPin(pinPwm, 0, 4096)
+		} else {
+			if direction > 1 {
+				setPin(pinin1, 0, 4096)
+				setPin(pinin2, 4096, 0)
+			} else {
+				setPin(pinin1, 4096, 0)
+				setPin(pinin2, 0, 4096)
+			}
+			throttleValue := int(4096 * throttlePercent)
+			log.Printf("motor 1 throttle pwm value %v\n", throttleValue)
+			setPin(pinPwm, 0, throttleValue)
+		}
+	case 2:
+		pinPwm := 13
+		pinin1 := 12
+		pinin2 := 11
+
+		if throttlePercent == 0 {
+			setPin(pinin1, 0, 4096)
+			setPin(pinin2, 0, 4096)
+			setPin(pinPwm, 0, 4096)
+		} else {
+			if direction > 1 {
+				setPin(pinin1, 0, 4096)
+				setPin(pinin2, 4096, 0)
+			} else {
+				setPin(pinin1, 4096, 0)
+				setPin(pinin2, 0, 4096)
+			}
+			throttleValue := int(4096 * throttlePercent)
+			log.Printf("motor 2 throttle pwm value %v\n", throttleValue)
+			setPin(pinPwm, 0, throttleValue)
+		}
 	}
 }
 func setThrottle(pos float64) {
@@ -409,35 +459,45 @@ func setThrottle(pos float64) {
 	// pinin2 := 9
 
 	//motor 2
-	pinPwm := 2
-	pinin1 := 4
-	pinin2 := 3
+	// pinPwm := 13
+	// pinin1 := 12
+	// pinin2 := 11
 
-	if pos > 490 && pos < 510 {
-		pos = 500
+	//motor 3
+	// pinPwm := 7
+	// pinin1 := 6
+	// pinin2 := 5
+
+	//motor 4
+	//pinPwm := 2
+	//pinin1 := 4
+	//pinin2 := 3
+
+	throttleThreshold := 10.0
+	throttleMidpoint := 500.0
+	if pos > throttleMidpoint-throttleThreshold && pos < throttleMidpoint+throttleThreshold {
+
 		fmt.Printf("setThrottle stop %v\n", pos)
 
-		setPin(pinin1, 0)
-		setPin(pinin2, 0)
-		setPin(pinPwm, 0)
+		motorSetThrottle(1, 0, 0)
+		motorSetThrottle(2, 0, 0)
+
 	} else {
 		if pos >= 500.0 {
-			posInt := int(((pos - 500.0) / 500.0) * 100)
+			throttleValue := (pos - 500.0) / 500.0
 
-			fmt.Printf("setThrottle fwd %v\n posInt", posInt)
+			fmt.Printf("setThrottle fwd %v throttleValue\n", throttleValue)
 
-			setPin(pinin1, 4096)
-			setPin(pinin2, 0)
-			setPwmChanPercent(pinPwm, posInt)
+			motorSetThrottle(1, 1, throttleValue)
+			motorSetThrottle(2, 1, throttleValue)
 
 		} else {
-			posInt := int((pos / 500.0) * 100)
+			throttleValue := pos / 500.0
 
-			fmt.Printf("setThrottle rev %v\n", posInt)
+			fmt.Printf("setThrottle rev %v throttleValue\n", throttleValue)
 
-			setPin(pinin1, 0)
-			setPin(pinin2, 4096)
-			setPwmChanPercent(pinPwm, posInt)
+			motorSetThrottle(1, -1, throttleValue)
+			motorSetThrottle(2, -1, throttleValue)
 		}
 	}
 
