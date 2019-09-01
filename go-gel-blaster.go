@@ -402,48 +402,50 @@ func setPin(pin int, pwmStartVal int, pwmEndVal int) {
 }
 func motorSetThrottle(motorNo int, direction int, throttlePercent float64) {
 
+	maxThrottle := 4095.0
+
 	switch motorNo {
 	default:
 		panic("invalid motor")
 	case 1:
-		pinPwm := 8
-		pinin1 := 10
-		pinin2 := 9
+		pinPwm := 2
+		pinin1 := 4
+		pinin2 := 3
 
 		if throttlePercent == 0 {
 			setPin(pinin1, 0, 4096)
 			setPin(pinin2, 0, 4096)
 			setPin(pinPwm, 0, 4096)
 		} else {
-			if direction > 1 {
+			if direction >= 1 {
 				setPin(pinin1, 0, 4096)
 				setPin(pinin2, 4096, 0)
 			} else {
 				setPin(pinin1, 4096, 0)
 				setPin(pinin2, 0, 4096)
 			}
-			throttleValue := int(4096 * throttlePercent)
+			throttleValue := int(maxThrottle * throttlePercent)
 			log.Printf("motor 1 throttle pwm value %v\n", throttleValue)
 			setPin(pinPwm, 0, throttleValue)
 		}
 	case 2:
 		pinPwm := 13
-		pinin1 := 12
-		pinin2 := 11
+		pinin1 := 11
+		pinin2 := 12
 
 		if throttlePercent == 0 {
 			setPin(pinin1, 0, 4096)
 			setPin(pinin2, 0, 4096)
 			setPin(pinPwm, 0, 4096)
 		} else {
-			if direction > 1 {
+			if direction >= 1 {
 				setPin(pinin1, 0, 4096)
 				setPin(pinin2, 4096, 0)
 			} else {
 				setPin(pinin1, 4096, 0)
 				setPin(pinin2, 0, 4096)
 			}
-			throttleValue := int(4096 * throttlePercent)
+			throttleValue := int(maxThrottle * throttlePercent)
 			log.Printf("motor 2 throttle pwm value %v\n", throttleValue)
 			setPin(pinPwm, 0, throttleValue)
 		}
@@ -480,24 +482,26 @@ func setThrottle(pos float64) {
 		fmt.Printf("setThrottle stop %v\n", pos)
 
 		motorSetThrottle(1, 0, 0)
-		motorSetThrottle(2, 0, 0)
+		//motorSetThrottle(2, 0, 0)
 
 	} else {
 		if pos >= 500.0 {
+			//forward
 			throttleValue := (pos - 500.0) / 500.0
 
 			fmt.Printf("setThrottle fwd %v throttleValue\n", throttleValue)
 
 			motorSetThrottle(1, 1, throttleValue)
-			motorSetThrottle(2, 1, throttleValue)
+			//motorSetThrottle(2, 1, throttleValue)
 
 		} else {
-			throttleValue := pos / 500.0
+			//reverse
+			throttleValue := (500.0 - pos) / 500.0
 
 			fmt.Printf("setThrottle rev %v throttleValue\n", throttleValue)
 
 			motorSetThrottle(1, -1, throttleValue)
-			motorSetThrottle(2, -1, throttleValue)
+			//motorSetThrottle(2, -1, throttleValue)
 		}
 	}
 
