@@ -99,8 +99,8 @@ var throttlePwmFreq1500us int = 300
 var throttlePwmFreqUsCalc float64 = float64(throttlePwmFreq1ms) / 1000
 
 var throttlePwmChannel int = 0
-var throttlePwmMax float64 = 1000.0
-var throttlePwmOffset float64 = 1000.0
+var throttlePwmMax float64 = 4096.0
+var throttlePwmOffset float64 = 0.0
 
 var stopSteeringLoopChan = make(chan struct{}, 1)
 
@@ -355,7 +355,7 @@ func setTrexJawPos(pos float64) {
 
 	//pulseWidth := int(math.Round(1200 * throttlePwmFreqUsCalc))
 	//	fmt.Printf("set pulseLengthUs=%v, throttlePwmFreqUsCalc=%v, pulseStart=%v\n", pulseLengthUs, throttlePwmFreqUsCalc, pulseStart)
-	if err := pca9685Inst.SetPwm(15, 0, int(throttlePwmFreqUsCalc*updateTrexJawPulse)); err != nil {
+	if err := pca9685Inst.SetPwm(0, 0, int(throttlePwmFreqUsCalc*updateTrexJawPulse)); err != nil {
 		panic(err)
 	}
 }
@@ -369,7 +369,7 @@ func setTrexPanPos(pos float64) {
 		return
 	}
 	trexPanCurrentPos = trexPanNewPos
-	if err := pca9685Inst.SetPwm(13, 0, trexPanNewPos); err != nil {
+	if err := pca9685Inst.SetPwm(15, 0, trexPanNewPos); err != nil {
 		panic(err)
 	}
 }
@@ -394,29 +394,81 @@ func setTrexTiltPos(pos float64) {
 func stopThrottle() {
 	setThrottleMicroSeconds(0)
 }
+func setPin(pin int, pwmVal int) {
+	if err := pca9685Inst.SetPwm(pin, 0, pwmVal); err != nil {
+		panic(err)
+	}
+}
 func setThrottle(pos float64) {
-	//subtract too to start at 800ms
-	//throttleMax := 500.0 //only operate within the first 2ms
-	//940 or less = brake
-	microSecondSetValue := 1500
+	//pos is number between 0 and 1000
+	// 500 is stopped, < 500 is reverse, > 500 is forward
+
+	//motor 1
+	// pinPwm := 8
+	// pinin1 := 10
+	// pinin2 := 9
+
+	//motor 2
+	pinPwm := 2
+	pinin1 := 4
+	pinin2 := 3
+
 	if pos > 490 && pos < 510 {
 		pos = 500
+		fmt.Printf("setThrottle stop %v\n", pos)
+
+		setPin(pinin1, 0)
+		setPin(pinin2, 0)
+		setPin(pinPwm, 0)
 	} else {
-		if pos >= 500 {
-			microSecondSetValue = int((pos / 1000.0) * 100.0)
-			microSecondSetValue += 1600
+		if pos >= 500.0 {
+			posInt := int(((pos - 500.0) / 500.0) * 100)
+
+			fmt.Printf("setThrottle fwd %v\n posInt", posInt)
+
+			setPin(pinin1, 4096)
+			setPin(pinin2, 0)
+			setPwmChanPercent(pinPwm, posInt)
+
 		} else {
-			microSecondSetValue = int(((500 - pos) / 500.0) * 30.0)
-			microSecondSetValue = 1470 - microSecondSetValue
+			posInt := int((pos / 500.0) * 100)
+
+			fmt.Printf("setThrottle rev %v\n", posInt)
+
+			setPin(pinin1, 0)
+			setPin(pinin2, 4096)
+			setPwmChanPercent(pinPwm, posInt)
 		}
 	}
 
 	//microSecondSetValue := int((pos / 1000) * throttleMax)
 
-	fmt.Printf("setThrottleMicroSeconds %v\n", (microSecondSetValue))
-
-	setThrottleMicroSeconds(microSecondSetValue)
+	//setThrottleMicroSeconds(microSecondSetValue)
 }
+
+// func setThrottle(pos float64) {
+// 	//subtract too to start at 800ms
+// 	//throttleMax := 500.0 //only operate within the first 2ms
+// 	//940 or less = brake
+// 	microSecondSetValue := 1500
+// 	if pos > 490 && pos < 510 {
+// 		pos = 500
+// 	} else {
+// 		if pos >= 500 {
+// 			microSecondSetValue = int((pos / 1000.0) * 100.0)
+// 			microSecondSetValue += 1600
+// 		} else {
+// 			microSecondSetValue = int(((500 - pos) / 500.0) * 30.0)
+// 			microSecondSetValue = 1470 - microSecondSetValue
+// 		}
+// 	}
+
+// 	//microSecondSetValue := int((pos / 1000) * throttleMax)
+
+// 	fmt.Printf("setThrottleMicroSeconds %v\n", (microSecondSetValue))
+
+// 	setThrottleMicroSeconds(microSecondSetValue)
+// }
 
 func setThrottleFullRange(pulseEnd int) {
 
@@ -559,7 +611,7 @@ func setPwmChanPercent(chanNo int, percent int) {
 	pwmCalc := 4095.0 * percent / 100.0
 	//fmt.Printf(", calc=%v ", pwmCalc)
 	pwmSet := int(pwmCalc)
-	//fmt.Printf(", set=%v \n", pwmSet)
+	fmt.Printf("set percent %v, %v set=%v \n", chanNo, percent, pwmSet)
 
 	if err := pca9685Inst.SetPwm(chanNo, 0, pwmSet); err != nil {
 		panic(err)
@@ -795,7 +847,7 @@ func main() {
 	//https://github.com/adafruit/Adafruit-Motor-HAT-Python-Library/blob/master/Adafruit_MotorHAT/Adafruit_PWM_Servo_Driver.py
 	//Adafruit board is address 0x60
 	//Generic PCA9685 address is 0x40
-	pca9685Inst = pca9685.New(i2cBus, 0x40)
+	pca9685Inst = pca9685.New(i2cBus, 0x60)
 	pca9685Inst.Freq = throttlePwmFreq
 	pca9685Inst.Wake()
 	defer pca9685Inst.Close()
