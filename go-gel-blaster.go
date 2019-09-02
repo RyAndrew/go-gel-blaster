@@ -402,7 +402,9 @@ func setPin(pin int, pwmStartVal int, pwmEndVal int) {
 }
 func motorSetThrottle(motorNo int, direction int, throttlePercent float64) {
 
-	maxThrottle := 4095.0
+	maxThrottle := 4095
+	maxThrottleRange := 1000.0
+	maxThrottleOffset := maxThrottle - int(maxThrottleRange)
 
 	switch motorNo {
 	default:
@@ -424,14 +426,14 @@ func motorSetThrottle(motorNo int, direction int, throttlePercent float64) {
 				setPin(pinin1, 4096, 0)
 				setPin(pinin2, 0, 4096)
 			}
-			throttleValue := int(maxThrottle * throttlePercent)
+			throttleValue := maxThrottleOffset + int(maxThrottleRange*throttlePercent)
 			log.Printf("motor 1 throttle pwm value %v\n", throttleValue)
 			setPin(pinPwm, 0, throttleValue)
 		}
 	case 2:
-		pinPwm := 13
-		pinin1 := 11
-		pinin2 := 12
+		pinPwm := 7
+		pinin1 := 6
+		pinin2 := 5
 
 		if throttlePercent == 0 {
 			setPin(pinin1, 0, 4096)
@@ -445,7 +447,7 @@ func motorSetThrottle(motorNo int, direction int, throttlePercent float64) {
 				setPin(pinin1, 4096, 0)
 				setPin(pinin2, 0, 4096)
 			}
-			throttleValue := int(maxThrottle * throttlePercent)
+			throttleValue := maxThrottleOffset + int(maxThrottleRange*throttlePercent)
 			log.Printf("motor 2 throttle pwm value %v\n", throttleValue)
 			setPin(pinPwm, 0, throttleValue)
 		}
@@ -482,7 +484,7 @@ func setThrottle(pos float64) {
 		fmt.Printf("setThrottle stop %v\n", pos)
 
 		motorSetThrottle(1, 0, 0)
-		//motorSetThrottle(2, 0, 0)
+		motorSetThrottle(2, 0, 0)
 
 	} else {
 		if pos >= 500.0 {
@@ -492,7 +494,7 @@ func setThrottle(pos float64) {
 			fmt.Printf("setThrottle fwd %v throttleValue\n", throttleValue)
 
 			motorSetThrottle(1, 1, throttleValue)
-			//motorSetThrottle(2, 1, throttleValue)
+			motorSetThrottle(2, 1, throttleValue)
 
 		} else {
 			//reverse
@@ -501,7 +503,7 @@ func setThrottle(pos float64) {
 			fmt.Printf("setThrottle rev %v throttleValue\n", throttleValue)
 
 			motorSetThrottle(1, -1, throttleValue)
-			//motorSetThrottle(2, -1, throttleValue)
+			motorSetThrottle(2, -1, throttleValue)
 		}
 	}
 
